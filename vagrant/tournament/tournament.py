@@ -36,6 +36,16 @@ def countPlayers():
     c.execute("select count(*) from player;")
     players_count = c.fetchall()
     conn.close()
+    return players_count[0][0]
+
+
+def seePlayers():
+    """Returns the number of players currently registered."""
+    conn = connect()
+    c = conn.cursor()
+    c.execute("select * from player;")
+    players_count = c.fetchall()
+    conn.close()
     return players_count
 
 
@@ -50,7 +60,7 @@ def registerPlayer(name):
     """
     conn = connect()
     c = conn.cursor()
-    c.execute("insert into player (name) values ('{}');".format(name))
+    c.execute("INSERT INTO player (name) VALUES (%s)", (name,))
     conn.commit()
     conn.close()
 
@@ -68,6 +78,12 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
+    conn = connect()
+    c = conn.cursor()
+    c.execute("select * from standings;")
+    standings = c.fetchall()
+    conn.close()
+    return standings
 
 
 def reportMatch(winner, loser):
@@ -80,15 +96,19 @@ def reportMatch(winner, loser):
     conn = connect()
     c = conn.cursor()
     c.execute(
-        "insert into match (winner, loser)"
-        "select "
-        "p1.id, p2.id"
-        "from player p1 "
-        "cross join player p2"
-        "where"
-        "p1.name = '{0}'"
-        "and"
-        "p2.name = '{1}';".format(winner, loser))
+        """
+       insert into match (winner, loser)
+       select
+       p1.id, p2.id
+       from player p1
+       cross join player p2
+       where
+       p1.id = %s
+       and
+       p2.id = %s;
+    """,
+        (winner, loser)
+    )
     conn.commit()
     conn.close()
 
@@ -108,3 +128,8 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
+    standings = playerStandings()
+    return [
+        (standings[i - 1][0], standings[i - 1][1]) + (
+            (standings[i][0], standings[i][1])) for i in range(
+            1, len(standings), 2)]
